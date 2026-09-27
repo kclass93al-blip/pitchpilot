@@ -836,7 +836,7 @@ S("/",{title:"AI Proposal Generator for Freelancers & Creators",render(){
    ["Does PitchPilot guarantee jobs?","No. PitchPilot does not guarantee employment, clients, income, interviews, or project awards. It helps you apply professionally; winning work still depends on fit, pricing, and the client."],
    ["How does pricing guidance work?","You enter the service, hours, complexity, deadline, and your rate. PitchPilot returns an estimated range with a sample milestone structure. Prices are estimates for guidance only — you always set the final price."],
    ["Can I cancel Pro?","Yes, anytime from Settings → Billing. You keep Pro until the end of the billing period."],
-   ["How are my proposals stored?","In this build, your account and proposals are stored locally in your browser. A hosted version with cloud accounts is on the roadmap."]].map(f=>'<div class="fq"><div class="fq-q">'+f[0]+'<span>+</span></div><div class="fq-a">'+f[1]+'</div>').join("")+'</div></div></section>'+
+   ["How are my proposals stored?","In this build, your account and proposals are stored locally in your browser. A hosted version with cloud accounts is on the roadmap."]].map(f=>'<div class="fq"><div class="fq-q">'+f[0]+'<span>+</span></div><div class="fq-a">'+f[1]+'</div></div>').join("")+'</div></section>'+
   '<footer class="foot"><div class="wrap"><div class="fcols"><div><div class="brand" style="padding:0 0 12px"><div class="logo">P</div><div><b>PitchPilot</b><small>APPLY SMARTER</small></div></div><p class="sm mut">Apply smarter. Pitch faster. Get ready to work.</p></div>'+
   '<div><h4>Product</h4><a href="#features">Features</a><a href="#how">How it works</a><a href="#pricing">Pricing</a></div>'+
   '<div><h4>Get started</h4><a href="#/signup">Create account</a><a href="#/signin">Sign in</a><a href="#faq">FAQ</a></div>'+
@@ -853,8 +853,7 @@ S("/signin",{title:"Sign In",render(){
   '<form id="f"><div class="field"><label class="lab">Email</label><input class="in" id="email" type="email" placeholder="you@example.com" required></div>'+
   '<div class="field"><label class="lab">Password</label><input class="in" id="pass" type="password" placeholder="••••••••" required></div>'+
   '<div class="alert a-err hide" id="err"></div><button class="btn btn-p btn-block" type="submit">Sign In</button></form>'+
-  '<div class="auth-alt"><a href="#/forgot">Forgot password?</a> · <a href="#/signup">Create an account</a></div>'+
-  '<div class="demobox"><b>Try the demo:</b> demo@pitchpilot.app / demo1234<br><span class="tiny">Demo content is clearly labeled and fictional.</span></div>');
+  '<div class="auth-alt"><a href="#/forgot">Forgot password?</a> · <a href="#/signup">Create an account</a></div>');
   $("#f").onsubmit=async e=>{e.preventDefault();const er=$("#err");er.classList.add("hide");
     try{await Auth.login($("#email").value,$("#pass").value);trackEvent("login",{});location.hash=Auth.user.onboarded?"#/app":"#/onboarding";}
     catch(err){er.textContent=err.message;er.classList.remove("hide");}};
@@ -1010,8 +1009,8 @@ S("/app/proposals/new",{auth:true,title:"New Proposal",render(){
       step++;draw();};
     const g=$("#wgen");if(g)g.onclick=generate;
   }
-  function collect(){const v=id=>{const e=$("#"+id);return e?e.value:"";};
-    job.title=v("j_title");job.client=v("j_client");job.platform=v("j_plat");job.desc=v("j_desc");job.budget=v("j_budget");job.deadline=v("j_dead");job.requirements=v("j_req");}
+  function collect(){const map={j_title:"title",j_client:"client",j_plat:"platform",j_desc:"desc",j_budget:"budget",j_dead:"deadline",j_req:"requirements"};
+    for(const id in map){const e=$("#"+id);if(e)job[map[id]]=e.value;}}
   function renderAnalyzer(){
     const el=$("#analyzer");if(!el)return;
     const txt=job.desc.trim();
@@ -1542,38 +1541,8 @@ S("/app/admin",{auth:true,title:"Admin",render(){
 }});
 
 /* ================= E. SEED & INIT ================= */
-async function seedDemo(){
-  if(store.get("seeded_v1"))return;
-  const users=Auth.users();
-  async function mk(email,pass,name,role){
-    let u=users.find(x=>x.email===email);
-    if(!u){u={id:uid(),email,passHash:await sha256(pass),name,role,createdAt:Date.now(),onboarded:true};users.push(u);}
-    return u;
-  }
-  const demo=await mk("demo@pitchpilot.app","demo1234","Ava Thompson","user");
-  await mk("admin@pitchpilot.app","admin123","Admin","admin");
-  store.set("users",users);
-  if(store.get("data_"+demo.id,null)){store.set("seeded_v1",true);return;}
-  const dp={firstName:"Ava",lastName:"Thompson",title:"UGC Creator & Video Editor",bio:"I create scroll-stopping UGC and edit fast-turnaround video for brands and creators.",location:"United States",portfolio:"https://example.com/ava",website:"",yearsExp:"3",hourlyRate:"40",minPrice:"150",skills:["Video Editing","UGC Creation","Social Media"],categories:["UGC Creator","Video Editor"],tone:"Friendly"};
-  const jobs=[
-    {title:"Video Editor for Weekly YouTube Channel",client:"Bright Media",platform:"Upwork",desc:"Looking for a reliable video editor for our weekly YouTube channel (50k subscribers). Each video is 8-12 minutes, talking-head with b-roll. Must know Premiere Pro and deliver within 48 hours of receiving footage. Please share 2-3 samples of similar work. Budget is $200 per video, ongoing weekly work for the right person.",budget:"$200/video",deadline:"48-hour turnaround"},
-    {title:"UGC Creator for Skincare Launch",client:"GlowLab",platform:"UGC Platform",desc:"We're launching a new Vitamin C serum and need 3 authentic UGC videos (30 seconds each) for TikTok and Instagram Reels. Natural, conversational style — no stiff ads. Must include a hook in the first 3 seconds and a clear CTA. Usage: 6 months paid social. Please share your rates and turnaround time.",budget:"$450",deadline:""},
-    {title:"Blog Writer for Outdoor Brand",client:"NorthPeak Outdoors",platform:"Direct Client",desc:"Seeking a blog writer for our outdoor gear brand. 4 SEO-friendly articles per month (1,200+ words each) about hiking, camping, and trail guides. Must have experience with outdoor topics and basic SEO. Long-term collaboration for the right writer.",budget:"$800/month",deadline:""}
-  ];
-  const statuses=["Submitted","Draft","Won"];
-  const proposals=jobs.map((j,i)=>{const r=generateProposal(j,dp,"Friendly",i);return{id:uid(),jobTitle:j.title,client:j.client,platform:j.platform,jobDesc:j.desc,budget:j.budget,deadline:j.deadline,requirements:"",style:"Friendly",body:r.body,why:r.why,analysis:r.analysis,status:statuses[i],demo:true,createdAt:Date.now()-(3-i)*86400000,updatedAt:Date.now()-(3-i)*86400000,variant:0};});
-  const dd={plan:"free",profile:dp,proposals,
-    ugc:[{id:uid(),brand:"GlowLab",product:"Vitamin C Serum",createdAt:Date.now()-86400000,demo:true,variant:0,data:generateUGC({brand:"GlowLab",product:"Vitamin C Serum",campaign:"Product Demo",deliverables:"3x 30s videos",platform:"TikTok",videoLen:"30",experience:"3 years, 60+ brand videos",tone:"Natural and Conversational",deadline:"Dec 20",budget:"$450"})}],
-    scopes:[{id:uid(),name:"Video Editing Retainer — Bright Media",createdAt:Date.now()-2*86400000,demo:true,sections:generateScope({desc:"Weekly YouTube video editing retainer for Bright Media's 50k-subscriber channel.",objectives:"Publish one polished video per week\nKeep a consistent intro/outro style",deliverables:"1 edited video per week (8-12 min)\nThumbnail design\n48-hour turnaround",timeline:"Ongoing weekly, starting immediately",revisions:"2",payment:"$200 per video, paid weekly",clientResp:"Provide raw footage and brand assets on time",exclusions:"Scriptwriting\nChannel management",notes:""} )}],
-    followups:[],usage:{month:monthKey(),count:1},
-    notifications:[{id:uid(),text:"Welcome to the demo workspace! All content here is clearly-labeled sample data.",ts:Date.now()-86400000,read:false}],
-    events:[],settings:{notifyEmail:false,notifyProduct:true,aiProvider:"builtin",stripeKey:""}};
-  store.set("data_"+demo.id,dd);
-  store.set("seeded_v1",true);
-}
 async function init(){
   Auth.restore();
-  try{await seedDemo();}catch(e){}
   if(!location.hash)location.hash="#/";
   route();
 }
