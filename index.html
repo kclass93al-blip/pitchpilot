@@ -461,6 +461,9 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
 const Screens={};
 function S(path,def){Screens[path]=def;}
 
+/* ---------- APP CONFIG ---------- */
+const SUPPORT_EMAIL=""; // Set this to your support inbox (e.g. "support@pitchpilot.app") to enable one-tap email problem reports. While empty, the contact form offers copy-to-clipboard instead — never a dead end.
+
 const NAV=[
   {sect:"Workspace"},
   {path:"/app",icon:"◉",label:"Dashboard"},
@@ -847,7 +850,7 @@ S("/",{title:"AI Proposal Generator for Freelancers & Creators",render(){
    ["How are my proposals stored?","In this build, your account and proposals are stored locally in your browser. A hosted version with cloud accounts is on the roadmap."]].map(f=>'<div class="fq"><div class="fq-q">'+f[0]+'<span>+</span></div><div class="fq-a">'+f[1]+'</div></div>').join("")+'</div></section>'+
   '<footer class="foot"><div class="wrap"><div class="fcols"><div><div class="brand" style="padding:0 0 12px"><div class="logo">P</div><div><b>PitchPilot</b><small>APPLY SMARTER</small></div></div><p class="sm mut">Apply smarter. Pitch faster. Get ready to work.</p></div>'+
   '<div><h4>Product</h4><a href="#features">Features</a><a href="#how">How it works</a><a href="#pricing">Pricing</a></div>'+
-  '<div><h4>Get started</h4><a href="#/signup">Create account</a><a href="#/signin">Sign in</a><a href="#faq">FAQ</a></div>'+
+  '<div><h4>Get started</h4><a href="#/signup">Create account</a><a href="#/signin">Sign in</a><a href="#faq">FAQ</a><a href="#/contact">Contact us</a></div>'+
   '<div><h4>Built for</h4><a href="#for-freelancers">Freelancers</a><a href="#for-ugc">UGC creators</a><a href="#for-agencies">Agencies</a></div></div>'+
   '<div class="fbot"><span>© 2026 PitchPilot. All rights reserved.</span><span>PitchPilot does not guarantee jobs, clients, or income.</span></div></div></footer>';
   $$(".fq-q").forEach(q=>q.onclick=()=>q.parentElement.classList.toggle("open"));
@@ -1485,20 +1488,60 @@ S("/app/billing",{auth:true,title:"Billing",render(){
   });
 }});
 
+/* ---------- CONTACT ---------- */
+function contactCardHTML(prefillName,prefillEmail){
+  return '<div class="card"><h3 class="mb1">Contact us</h3>'+
+  '<p class="sm mut mb2">Something broken? Tell us what happened below and we\'ll look into it.</p>'+
+  '<div class="frow"><div class="field"><label class="lab">Name</label><input class="in" id="c_name" value="'+esc(prefillName||"")+'" autocomplete="name"></div>'+
+  '<div class="field"><label class="lab">Email (optional — for a reply)</label><input class="in" id="c_email" type="email" value="'+esc(prefillEmail||"")+'" placeholder="you@example.com" autocomplete="email"></div></div>'+
+  '<div class="field"><label class="lab">What\'s wrong?</label><select class="sel" id="c_cat"><option>Something\'s broken</option><option>I can\'t log in or sign up</option><option>Question about a feature</option><option>Billing question</option><option>Something else</option></select></div>'+
+  '<div class="field"><label class="lab">Details *</label><textarea class="ta" id="c_msg" placeholder="What happened? What were you doing right before it broke?"></textarea></div>'+
+  '<div id="c_done"></div>'+
+  '<button class="btn btn-p" id="csend">Prepare report</button></div>';
+}
+function bindContactCard(){
+  $("#csend").onclick=()=>{
+    const cat=$("#c_cat").value,name=$("#c_name").value.trim(),email=$("#c_email").value.trim(),msg=$("#c_msg").value.trim();
+    if(!msg){toast("Describe the problem first.","err");return;}
+    const report="--- PitchPilot problem report ---\nCategory: "+cat+"\nName: "+(name||"(not given)")+"\nReply-to: "+(email||"(not given)")+"\nPage: "+location.href+"\nTime: "+new Date().toISOString()+"\n\n"+msg+"\n--- end ---";
+    try{const msgs=store.get("support_msgs",[]);msgs.unshift({id:uid(),name:name,email:email,cat:cat,msg:msg,ts:Date.now(),read:false});store.set("support_msgs",msgs);}catch(e){}
+    trackEvent("support_message",{cat:cat});
+    const done=$("#c_done");
+    if(SUPPORT_EMAIL){
+      const href="mailto:"+SUPPORT_EMAIL+"?subject="+encodeURIComponent("[PitchPilot] "+cat)+"&body="+encodeURIComponent(report);
+      done.innerHTML='<div class="alert a-ok mt2">Your report is ready — send it with your email app, or copy it instead.</div><div class="frow mt2"><a class="abtn btn btn-p" href="'+href+'">Send via email</a><button class="btn btn-g" id="ccopy" type="button">Copy report</button></div>';
+    }else{
+      done.innerHTML='<div class="alert a-info mt2">Direct email support isn\'t connected yet — copy your report and send it to us wherever you found us.</div><div class="frow mt2"><button class="btn btn-g" id="ccopy" type="button">Copy report</button></div>';
+    }
+    $("#ccopy").onclick=()=>{
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(report).then(()=>toast("Report copied — paste it into an email or message to us.","ok"),()=>toast("Copy failed — select the text manually.","err"));}
+      else{toast("Copy isn't available here — select the text manually.","err");}
+    };
+  };
+}
+S("/contact",{title:"Contact Us",render(){
+  const logged=!!Auth.user;
+  $("#app").innerHTML=
+  '<nav class="lnav"><div class="lnav-in"><a href="#/" class="brand" style="padding:0;text-decoration:none"><div class="logo">P</div><div><b>PitchPilot</b><small>APPLY SMARTER</small></div></a><div class="top-sp"></div>'+
+  (logged?'<a href="#/app" class="abtn btn btn-p btn-sm">Go to Dashboard</a>':'<a href="#/signin" class="abtn btn btn-g btn-sm">Sign In</a><a href="#/signup" class="abtn btn btn-p btn-sm">Get Started</a>')+'</div></nav>'+
+  '<div class="wrap" style="max-width:760px;padding-top:44px;padding-bottom:64px"><span class="kicker">Support</span><h1>Contact us</h1>'+
+  '<p class="lead mb2">Hit a problem in the app? Tell us what happened — we read every report.</p>'+
+  '<div class="card mb2"><h3 class="mb1">Quick fixes</h3><ul class="tick"><li>Refresh the page — most glitches clear on reload.</li><li>Use the latest Chrome, Edge, or Safari.</li><li>Can\'t log in? Try the "Forgot password" link on the sign-in page.</li><li>On a phone? Everything works, but the proposal editor is roomier on desktop.</li></ul></div>'+
+  contactCardHTML(logged?Auth.user.name:"",logged?Auth.user.email:"")+
+  '<p class="sm mut mt2"><a href="#/">← Back to home</a></p></div>';
+  bindContactCard();
+}});
+
 /* ---------- HELP ---------- */
 const FAQS=[["What is PitchPilot?","PitchPilot is a proposal assistant for freelancers, UGC creators, virtual assistants, designers, marketers, writers, and developers. Paste a job description and it builds your proposal, scope of work, pricing guidance, client questions, and follow-up message."],["How does proposal generation work?","You enter the job details and choose a style. PitchPilot analyzes the posting, matches it against your profile — your skills, experience, and rates — and composes a structured proposal. It only uses information you supplied; it never invents experience or clients."],["Can I edit generated proposals?","Yes. Every proposal opens in a document editor where you can edit freely, regenerate, shorten, or shift the tone before copying or exporting a PDF."],["Does PitchPilot guarantee jobs?","No. PitchPilot does not guarantee employment, clients, income, interviews, or project awards. It helps you apply professionally; winning work still depends on fit, pricing, and the client."],["How does pricing guidance work?","You enter the service, hours, complexity, deadline, and your rate. PitchPilot returns an estimated range with a sample milestone structure. Prices are estimates for guidance only — you always set the final price."],["Can I cancel Pro?","Yes, anytime from Settings → Billing. You keep Pro until the end of the billing period."],["How are my proposals stored?","In this build, your account and proposals are stored locally in your browser. A hosted version with cloud accounts is on the roadmap."]];
 S("/app/help",{auth:true,title:"Help",render(){
   let inner='<div class="phead"><h2>Help</h2><p>Guides, answers, and support.</p></div>';
   inner+='<div class="card mb2"><h3 class="mb1">Getting started</h3><div class="steps" style="grid-template-columns:repeat(2,1fr)">'+[["Complete your profile","Add your skills, rates, and tone so proposals sound like you."],["Paste an opportunity","New Proposal → drop in any job description."],["Generate your package","Proposal, scope, pricing, questions, and follow-up."],["Review and send","Edit in the document editor, then copy or export a PDF."]].map((s,i)=>'<div class="stp"><div class="stp-n">'+(i+1)+'</div><h3>'+s[0]+'</h3><p>'+s[1]+'</p></div>').join("")+'</div></div>';
   inner+='<h3 class="mb1">Frequently asked questions</h3><div class="faq mb2">'+FAQS.map(f=>'<div class="fq"><div class="fq-q">'+f[0]+'<span>+</span></div><div class="fq-a">'+f[1]+'</div></div>').join("")+'</div>';
-  inner+='<div class="card"><h3 class="mb1">Contact support</h3><p class="sm mut mb2">Support inbox isn\'t connected in this build — messages are saved on this device and visible in the Admin panel.</p><div class="frow"><div class="field"><label class="lab">Name</label><input class="in" id="c_name" value="'+esc(Auth.user.name)+'"></div><div class="field"><label class="lab">Email</label><input class="in" id="c_email" value="'+esc(Auth.user.email)+'"></div></div><div class="field"><label class="lab">Message *</label><textarea class="ta" id="c_msg" placeholder="How can we help?"></textarea></div><button class="btn btn-p" id="csend">Send Message</button></div>';
+  inner+='<h3 class="mb1">Contact us</h3>'+contactCardHTML(Auth.user.name,Auth.user.email);
   shell(inner,"/app/help");
   $$(".fq-q").forEach(q=>q.onclick=()=>q.parentElement.classList.toggle("open"));
-  $("#csend").onclick=()=>{
-    const m=$("#c_msg").value.trim();if(!m){toast("Write your message first.","err");return;}
-    const msgs=store.get("support_msgs",[]);msgs.unshift({id:uid(),name:$("#c_name").value.trim(),email:$("#c_email").value.trim(),msg:m,ts:Date.now(),read:false});
-    store.set("support_msgs",msgs);$("#c_msg").value="";toast("Message saved.","ok");trackEvent("support_message",{});
-  };
+  bindContactCard();
 }});
 
 /* ---------- ADMIN ---------- */
