@@ -823,6 +823,12 @@ S("/",{title:"AI Proposal Generator for Freelancers & Creators",render(){
   '<div class="fgrid">'+FEATS.map(f=>'<div class="feat"><div class="fic">'+f[0]+'</div><h3>'+f[1]+'</h3><p>'+f[2]+'</p></div>').join("")+'</div></div></section>'+
   '<section class="sec" id="how" style="background:var(--b1)"><div class="wrap"><div class="sec-h"><span class="kicker">How it works</span><h2>From job post to sent proposal in minutes.</h2></div>'+
   '<div class="steps">'+[["Paste the opportunity.","Drop in any job description from Upwork, Fiverr, LinkedIn, or a direct client."],["Tell PitchPilot about yourself.","Your profile, skills, rates, and tone power every proposal."],["Generate your application package.","Proposal, scope, pricing guidance, questions, and follow-up — all at once."],["Review, edit, copy, or export.","Polish it in the document editor, then copy or export a branded PDF."]].map((s,i)=>'<div class="stp"><div class="stp-n">'+(i+1)+'</div><h3>'+s[0]+'</h3><p>'+s[1]+'</p></div>').join("")+'</div></div></section>'+
+  '<section class="sec" id="who"><div class="wrap"><div class="sec-h"><span class="kicker">Built for</span><h2>Three ways to win work.</h2><p class="lead">Whoever you pitch as, PitchPilot shapes the proposal to fit.</p></div>'+
+  '<div class="fgrid">'+
+  '<div class="feat" id="for-freelancers"><div class="fic">◉</div><h3>Freelancers</h3><p>Turn Upwork, Fiverr, and LinkedIn postings into polished proposals in minutes — with pricing guidance, client questions, and follow-ups built in.</p></div>'+
+  '<div class="feat" id="for-ugc"><div class="fic">◈</div><h3>UGC Creators</h3><p>Pitch brands with scripts, shot lists, and captions tailored to the product — plus scopes of work that spell out usage terms.</p></div>'+
+  '<div class="feat" id="for-agencies"><div class="fic">▤</div><h3>Agencies</h3><p>Answer RFPs and inbound leads fast with consistent, on-brand proposals your whole team can send.</p></div>'+
+  '</div></div></section>'+
   '<section class="sec" id="pricing"><div class="wrap"><div class="sec-h"><span class="kicker">Pricing</span><h2>Start free. Upgrade when you win.</h2><p class="lead">Every plan starts with real proposals you can send today.</p></div>'+
   '<div class="pgrid">'+
   '<div class="pcard"><div class="pname">Free</div><div class="prc">$0</div><div class="per">per month</div><ul class="tick"><li>3 proposals per month</li><li>Basic proposal generator</li><li>Basic scope of work</li></ul><a href="#/signup" class="abtn btn btn-g btn-block">Start Free</a></div>'+
@@ -840,7 +846,7 @@ S("/",{title:"AI Proposal Generator for Freelancers & Creators",render(){
   '<footer class="foot"><div class="wrap"><div class="fcols"><div><div class="brand" style="padding:0 0 12px"><div class="logo">P</div><div><b>PitchPilot</b><small>APPLY SMARTER</small></div></div><p class="sm mut">Apply smarter. Pitch faster. Get ready to work.</p></div>'+
   '<div><h4>Product</h4><a href="#features">Features</a><a href="#how">How it works</a><a href="#pricing">Pricing</a></div>'+
   '<div><h4>Get started</h4><a href="#/signup">Create account</a><a href="#/signin">Sign in</a><a href="#faq">FAQ</a></div>'+
-  '<div><h4>Built for</h4><a href="#features">Freelancers</a><a href="#features">UGC creators</a><a href="#features">Agencies</a></div></div>'+
+  '<div><h4>Built for</h4><a href="#for-freelancers">Freelancers</a><a href="#for-ugc">UGC creators</a><a href="#for-agencies">Agencies</a></div></div>'+
   '<div class="fbot"><span>© 2026 PitchPilot. All rights reserved.</span><span>PitchPilot does not guarantee jobs, clients, or income.</span></div></div></footer>';
   $$(".fq-q").forEach(q=>q.onclick=()=>q.parentElement.classList.toggle("open"));
 }});
