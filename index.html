@@ -570,7 +570,7 @@ function route(){
   if(!m){location.hash="#/";return;}
   if(m.def.auth&&!Auth.user){location.hash="#/signin";return;}
   if(raw==="/onboarding"&&!Auth.user){location.hash="#/signup";return;}
-  if(raw==="/app"&&Auth.user&&!Auth.user.onboarded){location.hash="#/onboarding";return;}
+  if(raw.startsWith("/app")&&Auth.user&&!Auth.user.onboarded){location.hash="#/onboarding";return;}
   document.title=(m.def.title?m.def.title+" — ":"")+"PitchPilot";
   try{m.def.render(m.params,m.def.bind||(()=>{}),m.def);}catch(err){
     $("#app").innerHTML='<div class="page"><div class="alert a-err">Something went wrong loading this page. Please try again.</div><a class="btn btn-g" href="#/app">Back to Dashboard</a></div>';
@@ -1083,7 +1083,7 @@ S("/app/proposals/:id",{auth:true,title:"Proposal",render(pa){
       const a=rec.analysis;
       inner+='<div class="card mt2"><h3 class="mb1">Job analysis</h3><div class="grid2">'+
       '<div class="arow"><b class="ar">Summary</b><p>'+esc(a.summary||"—")+'</p></div>'+
-      '<div class="arow"><b class="ar">Required skills</b><p>'+(a.skills.map(s=>esc(s.name)).join(" · ")||"—")+'</p></div></div>'+
+      '<div class="arow"><b class="ar">Required skills</b><p>'+((a.skills||[]).map(s=>esc(s.name)).join(" · ")||"—")+'</p></div></div>'+
       (a.redFlags&&a.redFlags.length?'<div class="arow"><b class="ar">Consider clarifying</b><ul>'+a.redFlags.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></div>':"")+'</div>';
     }
     shell(inner,"/app/history");
@@ -1145,9 +1145,10 @@ function scopeHtml(sections){
 function scopeText(sections){
   return sections.map(s=>s.h.toUpperCase()+"\n"+(s.list&&s.list.length?s.list.map(x=>"- "+x).join("\n"):(s.b||""))).join("\n\n");
 }
+function parasHtml(t){return esc(t).split(/\n\s*\n/).map(x=>"<p>"+x.replace(/\n/g,"<br>")+"</p>").join("");}
 S("/app/scope",{auth:true,title:"Scope of Work",render(){
   const d=getData();
-  let out=null,tab="preview",editTxt="";
+  let out=null,tab="preview",editTxt="",edited=false;
   function draw(){
     let inner='<div class="phead"><h2>Scope of Work</h2><p>Define deliverables, timelines, revisions, and responsibilities.</p></div>';
     if(!out){
@@ -1164,7 +1165,7 @@ S("/app/scope",{auth:true,title:"Scope of Work",render(){
     }else{
       inner+='<div class="dtool no-print"><button class="btn btn-g btn-sm" id="sback">← Back to form</button><button class="btn btn-g btn-sm" id="scopy">⧉ Copy</button><button class="btn btn-g btn-sm" id="spdf">⬇ Export PDF</button><button class="btn btn-p btn-sm" id="ssave">💾 Save Scope</button></div>';
       inner+='<div class="tabs no-print"><div class="tab'+(tab==="preview"?" on":"")+'" data-t="preview">Preview</div><div class="tab'+(tab==="edit"?" on":"")+'" data-t="edit">Edit</div></div>';
-      inner+=tab==="preview"?'<div class="doc"><div class="dbrand">PitchPilot</div><h2>Scope of Work</h2><div class="dmeta">'+fmtDate(Date.now())+'</div>'+scopeHtml(out)+'</div>'
+      inner+=tab==="preview"?'<div class="doc"><div class="dbrand">PitchPilot</div><h2>Scope of Work</h2><div class="dmeta">'+fmtDate(Date.now())+'</div>'+(edited?parasHtml(editTxt):scopeHtml(out))+'</div>'
         :'<textarea class="doc-edit" id="sedit">'+esc(editTxt)+'</textarea>';
     }
     inner+='<h3 class="mt3 mb1">Saved Scopes</h3><div id="slist">'+(d.scopes.length?d.scopes.map(sc=>'<div class="list-row"><div class="grow"><div class="t">'+(sc.demo?'<span class="bd b-pu" style="margin-right:8px">DEMO</span>':"")+esc(sc.name)+'</div><div class="s">'+fmtDate(sc.createdAt)+'</div></div><div class="row-actions"><button class="btn btn-g btn-sm" data-view="'+sc.id+'">View</button><button class="btn btn-d btn-sm" data-sdel="'+sc.id+'">Delete</button></div></div>').join(""):'<div class="empty"><div class="eic">▤</div><h3>No saved scopes yet.</h3><p>Generate a scope above and save it to find it here.</p></div>')+'</div>';
@@ -1175,24 +1176,24 @@ S("/app/scope",{auth:true,title:"Scope of Work",render(){
       const desc=v("s_desc");
       if(!desc){toast("Describe the project first.","err");$("#s_desc").focus();return;}
       out=generateScope({desc,objectives:v("s_obj"),deliverables:v("s_del"),timeline:v("s_time"),revisions:v("s_rev"),payment:v("s_pay"),clientResp:v("s_cr"),exclusions:v("s_exc"),notes:v("s_notes")});
-      tab="preview";editTxt=scopeText(out);draw();trackEvent("scope_generated",{});
+      tab="preview";editTxt=scopeText(out);edited=false;draw();trackEvent("scope_generated",{});
     };
     if(out){
-      $$(".tab").forEach(t=>t.onclick=()=>{if(t.dataset.t==="edit")editTxt=scopeText(out);tab=t.dataset.t;draw();});
-      $("#sback").onclick=()=>{out=null;draw();};
-      $("#scopy").onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(scopeText(out)):Promise.reject()).then(()=>toast("Scope copied.","ok")).catch(()=>toast("Copy failed.","err"));};
-      $("#spdf").onclick=()=>printDoc("Scope of Work",scopeHtml(out));
+      $$(".tab").forEach(t=>t.onclick=()=>{if(t.dataset.t==="edit"&&!edited)editTxt=scopeText(out);tab=t.dataset.t;draw();});
+      $("#sback").onclick=()=>{out=null;edited=false;editTxt="";draw();};
+      $("#scopy").onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(edited?editTxt:scopeText(out)):Promise.reject()).then(()=>toast("Scope copied.","ok")).catch(()=>toast("Copy failed.","err"));};
+      $("#spdf").onclick=()=>printDoc("Scope of Work",edited?parasHtml(editTxt):scopeHtml(out));
       $("#ssave").onclick=()=>{
         openModal('<div class="mhead">Save scope</div><div class="mbody"><div class="field"><label class="lab">Scope name</label><input class="in" id="sname" placeholder="e.g. Website Redesign — Acme Co"></div></div><div class="mfoot"><button class="btn btn-g btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-p btn-sm" id="sdosave">Save</button></div>');
-        $("#sdosave").onclick=()=>{const n=$("#sname").value.trim()||"Scope of Work";d.scopes.unshift({id:uid(),name:n,sections:out,createdAt:Date.now()});saveData(d);trackEvent("scope_saved",{});closeModal();draw();toast("Scope saved.","ok");};
+        $("#sdosave").onclick=()=>{const n=$("#sname").value.trim()||"Scope of Work";d.scopes.unshift({id:uid(),name:n,sections:out,text:edited?editTxt:null,createdAt:Date.now()});saveData(d);trackEvent("scope_saved",{});closeModal();draw();toast("Scope saved.","ok");};
       };
-      const se=$("#sedit");if(se)se.oninput=()=>{editTxt=se.value;};
+      const se=$("#sedit");if(se)se.oninput=()=>{editTxt=se.value;edited=true;};
     }
     $$("#slist [data-view]").forEach(b=>b.onclick=()=>{
       const sc=d.scopes.find(x=>x.id===b.dataset.view);if(!sc)return;
-      openModal('<div class="mhead">'+esc(sc.name)+'</div><div class="mbody"><div class="doc" style="padding:26px">'+scopeHtml(sc.sections)+'</div></div><div class="mfoot"><button class="btn btn-g btn-sm" id="mvcopy">⧉ Copy</button><button class="btn btn-g btn-sm" id="mvpdf">⬇ PDF</button><button class="btn btn-g btn-sm" onclick="closeModal()">Close</button></div>');
-      $("#mvcopy").onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(scopeText(sc.sections)):Promise.reject()).then(()=>toast("Copied.","ok")).catch(()=>toast("Copy failed.","err"));};
-      $("#mvpdf").onclick=()=>{closeModal();printDoc(sc.name,scopeHtml(sc.sections));};
+      openModal('<div class="mhead">'+esc(sc.name)+'</div><div class="mbody"><div class="doc" style="padding:26px">'+(sc.text?parasHtml(sc.text):scopeHtml(sc.sections))+'</div></div><div class="mfoot"><button class="btn btn-g btn-sm" id="mvcopy">⧉ Copy</button><button class="btn btn-g btn-sm" id="mvpdf">⬇ PDF</button><button class="btn btn-g btn-sm" onclick="closeModal()">Close</button></div>');
+      $("#mvcopy").onclick=()=>{(navigator.clipboard?navigator.clipboard.writeText(sc.text||scopeText(sc.sections)):Promise.reject()).then(()=>toast("Copied.","ok")).catch(()=>toast("Copy failed.","err"));};
+      $("#mvpdf").onclick=()=>{closeModal();printDoc(sc.name,sc.text?parasHtml(sc.text):scopeHtml(sc.sections));};
     });
     $$("#slist [data-sdel]").forEach(b=>b.onclick=async()=>{if(await confirmDlg("Delete scope","This will permanently delete this scope.","Delete")){const i=d.scopes.findIndex(x=>x.id===b.dataset.sdel);if(i>=0)d.scopes.splice(i,1);saveData(d);draw();toast("Scope deleted.","ok");}});
   }
