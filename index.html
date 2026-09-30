@@ -1483,12 +1483,12 @@ S("/app/settings",{auth:true,title:"Settings",render(){
 }});
 
 /* ---------- BILLING ---------- */
-/* Stripe Payment Links (test mode). Empty string = demo behavior. */
+/* Stripe Payment Links (LIVE mode). Empty string = demo behavior. */
 const STRIPE_LINKS={
-  pro:"https://buy.stripe.com/test_fZu4gz4i63ln7Gib4wbQY00",
-  proplus:"https://buy.stripe.com/test_14AdR901Qf452lYc8AbQY01"
+  pro:"https://buy.stripe.com/fZu4gz4i63ln7Gib4wbQY00",
+  proplus:"https://buy.stripe.com/14AdR901Qf452lYc8AbQY01"
 };
-const STRIPE_PORTAL="https://billing.stripe.com/p/login/test_fZu4gz4i63ln7Gib4wbQY00";
+const STRIPE_PORTAL="https://billing.stripe.com/p/login/fZu4gz4i63ln7Gib4wbQY00";
 function checkoutModal(planName,price,slug){
   const d=getData(),link=STRIPE_LINKS[slug]||"";
   if(!link){
