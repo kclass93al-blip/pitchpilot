@@ -6,6 +6,21 @@
 <title>PitchPilot — AI Proposal Generator for Freelancers &amp; Creators</title>
 <meta name="description" content="Create professional freelance proposals, UGC pitches, scopes of work, pricing guidance, and follow-ups with PitchPilot.">
 <meta name="theme-color" content="#0b0c10">
+<link rel="canonical" href="https://pitchpilot-virid.vercel.app/">
+<meta name="robots" content="index, follow">
+<meta name="author" content="PitchPilot">
+<meta name="keywords" content="AI proposal generator, freelance proposal writer, Upwork proposal tool, UGC pitch generator, scope of work generator, freelance pricing help, proposal follow-up">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PitchPilot">
+<meta property="og:title" content="PitchPilot — AI Proposal Generator for Freelancers &amp; Creators">
+<meta property="og:description" content="Create professional freelance proposals, UGC pitches, scopes of work, pricing guidance, and follow-ups with PitchPilot.">
+<meta property="og:url" content="https://pitchpilot-virid.vercel.app/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PitchPilot — AI Proposal Generator for Freelancers &amp; Creators">
+<meta name="twitter:description" content="Create professional freelance proposals, UGC pitches, scopes of work, pricing guidance, and follow-ups with PitchPilot.">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"PitchPilot","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://pitchpilot-virid.vercel.app/","description":"AI proposal generator for freelancers and creators: professional proposals, UGC pitches, scopes of work, pricing guidance, and follow-ups.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+</script>
 <style>
 /* ============ PITCHPILOT DESIGN SYSTEM ============ */
 :root{
@@ -380,12 +395,12 @@ const sess={
 };
 
 function freshData(){return{
-  plan:"free",
+  plan:"free",pendingPlan:null,
   profile:{firstName:"",lastName:"",title:"",bio:"",location:"",portfolio:"",website:"",yearsExp:"",hourlyRate:"",minPrice:"",skills:[],categories:[],tone:"Professional"},
   proposals:[],ugc:[],scopes:[],followups:[],
   usage:{month:monthKey(),count:0},
   notifications:[],events:[],
-  settings:{notifyEmail:false,notifyProduct:true,aiProvider:"builtin",stripeKey:""}
+  settings:{notifyEmail:false,notifyProduct:true,aiProvider:"builtin"}
 };}
 function getData(){const u=Auth.user;if(!u)return freshData();const d=store.get("data_"+u.id,null);if(!d){const f=freshData();store.set("data_"+u.id,f);return f;}if(d.usage.month!==monthKey())d.usage={month:monthKey(),count:0};return d;}
 function saveData(d){if(Auth.user)store.set("data_"+Auth.user.id,d);}
@@ -457,6 +472,13 @@ function confirmDlg(title,body,okLabel){
   });
 }
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+/* FAQ accordion — delegated so it survives re-renders */
+document.addEventListener("click",e=>{
+  const q=e.target&&e.target.closest?e.target.closest(".fq-q"):null;
+  if(!q)return;
+  const item=q.parentElement,open=item.classList.toggle("open");
+  const s=q.querySelector("span");if(s)s.textContent=open?"\u2212":"+";
+});
 
 const Screens={};
 function S(path,def){Screens[path]=def;}
@@ -512,7 +534,8 @@ function shell(inner,active){
     links+
     '<div class="side-foot"><div class="plan-pill"><span>'+esc(ui.label)+' plan</span><a href="#/app/billing" class="abtn btn btn-p btn-sm">Upgrade</a></div>'+
     '<div class="tiny mut">'+(ui.unlimited?"Unlimited proposals":esc(ui.used+" of "+ui.limit+" proposals used"))+'</div>'+
-    (ui.unlimited?"":'<div class="prog"><i style="width:'+ui.pct+'%"></i></div>')+'</div>'+
+    (ui.unlimited?"":'<div class="prog"><i style="width:'+ui.pct+'%"></i></div>')+
+    '<div class="mt1"><a href="#" id="sidelogout" class="tiny mut" style="text-decoration:underline">Log Out</a></div></div>'+
   '</aside><div class="main">'+
     '<div class="top"><div class="tsrch"><span class="sic">⌕</span><input id="gsearch" placeholder="Search proposals..." autocomplete="off"><div class="tsrch-res hide" id="sres"></div></div>'+
     '<div class="top-sp"></div>'+
@@ -525,27 +548,29 @@ function shell(inner,active){
   '<nav class="bnav">'+BNAV.map(n=>'<a class="blink'+(active===n.path?" on":"")+'" href="#'+n.path+'"><span class="ic">'+n.icon+'</span>'+esc(n.label)+'</a>').join("")+'</nav>';
   bindShell();
 }
+let openDrop=null; /* which header dropdown is open: 'bell' | 'ava' | null */
 function bindShell(){
   const ndrop=$("#ndrop");
-  const closeDrops=()=>{ndrop.classList.add("hide");$("#sres").classList.add("hide");};
+  const closeDrops=()=>{ndrop.classList.add("hide");$("#sres").classList.add("hide");openDrop=null;};
+  const slo=$("#sidelogout");if(slo)slo.onclick=e=>{e.preventDefault();Auth.logout();};
   $("#bellbtn").onclick=e=>{e.stopPropagation();
-    if(!ndrop.classList.contains("hide")){closeDrops();return;}
+    if(openDrop==="bell"){closeDrops();return;}
     const d=getData();
     ndrop.innerHTML='<div class="ndrop-h"><span>Notifications</span><a href="#" id="markread" class="tiny">Mark all read</a></div>'+
       (d.notifications.length?d.notifications.slice(0,12).map(n=>'<div class="nitem'+(n.read?"":" unread")+'">'+esc(n.text)+'<div class="tm">'+timeAgo(n.ts)+'</div></div>').join(""):'<div class="nitem">No notifications yet.</div>');
-    ndrop.classList.remove("hide");$("#sres").classList.add("hide");
+    ndrop.classList.remove("hide");$("#sres").classList.add("hide");openDrop="bell";
     const mr=$("#markread");if(mr)mr.onclick=ev=>{ev.preventDefault();d.notifications.forEach(n=>n.read=true);saveData(d);closeDrops();$("#bellbtn .ndot")?.remove();};
   };
   $("#avabtn").onclick=e=>{e.stopPropagation();
-    if(!ndrop.classList.contains("hide")){closeDrops();return;}
+    if(openDrop==="ava"){closeDrops();return;}
     ndrop.innerHTML='<div class="ndrop-h"><span>'+esc(Auth.user.name)+'</span></div>'+
       '<a class="nitem" style="display:block;color:var(--txt);text-decoration:none" href="#/app/profile">My Profile</a>'+
       '<a class="nitem" style="display:block;color:var(--txt);text-decoration:none" href="#/app/settings">Settings</a>'+
       '<a class="nitem" style="display:block;color:var(--red);text-decoration:none;cursor:pointer" id="logoutlink">Log Out</a>';
-    ndrop.classList.remove("hide");$("#sres").classList.add("hide");
+    ndrop.classList.remove("hide");$("#sres").classList.add("hide");openDrop="ava";
     $("#logoutlink").onclick=()=>Auth.logout();
   };
-  document.onclick=e=>{if(!e.target.closest("#ndrop")&&!e.target.closest("#bellbtn")&&!e.target.closest("#avabtn"))ndrop.classList.add("hide");};
+  document.onclick=e=>{if(!e.target.closest("#ndrop")&&!e.target.closest("#bellbtn")&&!e.target.closest("#avabtn"))closeDrops();};
   const si=$("#gsearch"),sr=$("#sres");
   si.oninput=debounce(()=>{
     const q=si.value.trim().toLowerCase();
@@ -853,7 +878,6 @@ S("/",{title:"AI Proposal Generator for Freelancers & Creators",render(){
   '<div><h4>Get started</h4><a href="#/signup">Create account</a><a href="#/signin">Sign in</a><a href="#faq">FAQ</a><a href="#/contact">Contact us</a></div>'+
   '<div><h4>Built for</h4><a href="#for-freelancers">Freelancers</a><a href="#for-ugc">UGC creators</a><a href="#for-agencies">Agencies</a></div></div>'+
   '<div class="fbot"><span>© 2026 PitchPilot. All rights reserved.</span><span>PitchPilot does not guarantee jobs, clients, or income.</span></div></div></footer>';
-  $$(".fq-q").forEach(q=>q.onclick=()=>q.parentElement.classList.toggle("open"));
 }});
 
 function authShell(title,sub,inner){
@@ -1443,13 +1467,12 @@ S("/app/settings",{auth:true,title:"Settings",render(){
       $("#gsave").onclick=()=>{s.notifyProduct=$("#n_prod").checked;saveData(d);toast("Settings saved.","ok");};
     }
     if(tab==="integr"){
-      b.innerHTML='<div class="card"><h3 class="mb1">Stripe</h3><p class="sm mut mb2">Add your Stripe keys to take real payments in the hosted version. Keys stay on this device and are never sent anywhere in this build.</p>'+
-      '<div class="field"><label class="lab">Stripe secret key</label><input class="in" id="i_sk" type="password" value="'+esc(s.stripeKey||"")+'" placeholder="sk_live_..."></div>'+
-      '<div class="alert '+(s.stripeKey?"a-ok":"a-info")+'">'+(s.stripeKey?"Stripe keys are saved on this device. Live checkout activates in the hosted version.":"No Stripe keys yet — checkout shows a demo state until you add them.")+'</div></div>'+
+      b.innerHTML='<div class="card"><h3 class="mb1">Stripe</h3><p class="sm mut mb2">Payments run through Stripe-hosted checkout — no keys are stored in this app.</p>'+
+      '<div class="alert '+(STRIPE_LINKS.pro?"a-ok":"a-info")+'">'+(STRIPE_LINKS.pro?"Checkout is connected.":"Checkout isn't connected yet.")+'</div></div>'+
       '<div class="card mt2"><h3 class="mb1">AI provider</h3><p class="sm mut mb2">This build uses PitchPilot\'s built-in generation engine. External AI providers need the hosted version with a backend.</p>'+
       '<div class="field"><label class="lab">Provider</label><select class="sel" id="i_ai"><option value="builtin">PitchPilot built-in engine (current)</option><option value="openai"'+(s.aiProvider==="openai"?" selected":"")+'>OpenAI (hosted version)</option><option value="anthropic"'+(s.aiProvider==="anthropic"?" selected":"")+'>Anthropic (hosted version)</option></select></div>'+
       '<button class="btn btn-p" id="isave">Save Integrations</button></div>';
-      $("#isave").onclick=()=>{s.stripeKey=$("#i_sk").value.trim();s.aiProvider=$("#i_ai").value;saveData(d);trackEvent("integrations_updated",{});toast("Integrations saved.","ok");draw();};
+      $("#isave").onclick=()=>{s.aiProvider=$("#i_ai").value;if("stripeKey" in s)delete s.stripeKey;saveData(d);trackEvent("integrations_updated",{});toast("Integrations saved.","ok");draw();};
     }
     if(tab==="bill"){
       const ui=usageInfo();
@@ -1460,32 +1483,59 @@ S("/app/settings",{auth:true,title:"Settings",render(){
 }});
 
 /* ---------- BILLING ---------- */
+/* Stripe Payment Links (test mode). Empty string = demo behavior. */
+const STRIPE_LINKS={
+  pro:"https://buy.stripe.com/test_fZu4gz4i63ln7Gib4wbQY00",
+  proplus:"https://buy.stripe.com/test_14AdR901Qf452lYc8AbQY01"
+};
+const STRIPE_PORTAL="https://billing.stripe.com/p/login/test_fZu4gz4i63ln7Gib4wbQY00";
 function checkoutModal(planName,price,slug){
-  const d=getData(),keys=d.settings.stripeKey;
+  const d=getData(),link=STRIPE_LINKS[slug]||"";
+  if(!link){
+    openModal('<div class="mhead">Upgrade to '+esc(planName)+'</div><div class="mbody"><div class="kv"><div class="kvr"><span class="k">Plan</span><span class="v">'+esc(planName)+'</span></div><div class="kvr"><span class="k">Price</span><span class="v">'+esc(price)+' / month</span></div></div>'+
+    '<div class="alert a-info mt2">Checkout isn\'t connected yet. In this build, enabling '+esc(planName)+' is a <b>demo toggle — no real payment is processed.</b></div></div>'+
+    '<div class="mfoot"><button class="btn btn-g btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-p btn-sm" id="doup">Enable '+esc(planName)+' (demo)</button></div>');
+    $("#doup").onclick=()=>{d.plan=slug;saveData(d);trackEvent("plan_changed",{plan:slug});notify("You're on PitchPilot "+planName+" (demo).");closeModal();route();toast("Welcome to "+planName+"!","ok");};
+    return;
+  }
   openModal('<div class="mhead">Upgrade to '+esc(planName)+'</div><div class="mbody"><div class="kv"><div class="kvr"><span class="k">Plan</span><span class="v">'+esc(planName)+'</span></div><div class="kvr"><span class="k">Price</span><span class="v">'+esc(price)+' / month</span></div></div>'+
-  '<div class="alert '+(keys?"a-warn":"a-info")+' mt2">'+(keys?"Stripe keys are saved, but live checkout needs the hosted version of PitchPilot.":"Checkout isn't connected yet — add Stripe keys in Settings → Integrations to take real payments.")+' In this build, enabling '+esc(planName)+' is a <b>demo toggle — no real payment is processed.</b></div></div>'+
-  '<div class="mfoot"><button class="btn btn-g btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-p btn-sm" id="doup">Enable '+esc(planName)+' (demo)</button></div>');
-  $("#doup").onclick=()=>{d.plan=slug;saveData(d);trackEvent("plan_changed",{plan:slug});notify("You're on PitchPilot "+planName+" (demo).");closeModal();route();toast("Welcome to "+planName+"!","ok");};
+  '<div class="alert a-info mt2">You\'ll complete payment on Stripe\'s secure checkout page. Your plan activates within 24 hours of payment.</div></div>'+
+  '<div class="mfoot"><button class="btn btn-g btn-sm" onclick="closeModal()">Cancel</button><button class="btn btn-p btn-sm" id="doup">Continue to secure checkout</button></div>');
+  $("#doup").onclick=()=>{d.pendingPlan={slug:slug,ts:Date.now()};saveData(d);trackEvent("checkout_started",{plan:slug});closeModal();window.open(link,"_blank","noopener");route();toast("Checkout opened — complete payment in the new tab.","ok");};
 }
 S("/app/billing",{auth:true,title:"Billing",render(){
   const d=getData(),cur=d.plan;
+  if(d.pendingPlan&&d.plan!=="free"){d.pendingPlan=null;saveData(d);}
   const plans=[
     {slug:"free",name:"Free",price:"$0",per:"per month",feats:["3 proposals per month","Basic proposal generator","Basic scope of work"],cta:cur==="free"?null:"Downgrade"},
     {slug:"pro",name:"Pro",price:"$9.99",per:"per month",hot:true,feats:["Unlimited proposals","UGC Pitch Builder","Pricing Assistant","Scope of Work","Follow-Ups","Proposal history","PDF export"],cta:cur==="pro"?null:"Upgrade to Pro"},
     {slug:"proplus",name:"Pro+",price:"$19.99",per:"per month",feats:["Everything in Pro","Advanced proposal improvement","Advanced UGC tools","More customization","Priority AI processing"],cta:cur==="proplus"?null:"Upgrade to Pro+"}
   ];
   let inner='<div class="phead"><h2>Billing</h2><p>Choose the plan that fits how much you apply.</p></div>';
-  inner+='<div class="alert a-info">Demo billing: no real payments are processed in this build. Connect Stripe keys in Settings → Integrations; live checkout activates in the hosted version.</div>';
+  if(d.pendingPlan&&d.plan==="free")inner+='<div class="alert a-warn">⏳ '+(d.pendingPlan.slug==="proplus"?"Pro+":"Pro")+' payment pending — your plan activates within 24 hours of payment. Questions? <a href="#/contact"><b>Contact us</b></a>.</div>';
+  if(STRIPE_PORTAL&&d.plan!=="free")inner+='<div class="card mb2"><div class="row"><div><b>Manage subscription</b><div class="sm mut">Update your card or cancel — self-serve, anytime.</div></div><span class="sp"></span><a class="abtn btn btn-g btn-sm" href="'+STRIPE_PORTAL+'" target="_blank" rel="noopener">Open customer portal</a></div></div>';
   inner+='<div class="pgrid">'+plans.map(p=>'<div class="pcard'+(p.hot?" hot":"")+'"><div class="pname">'+p.name+(cur===p.slug?' <span class="bd b-gr">CURRENT</span>':"")+'</div><div class="prc">'+p.price+'</div><div class="per">'+p.per+'</div><ul class="tick">'+p.feats.map(f=>'<li>'+f+'</li>').join("")+'</ul>'+
     (p.cta?'<button class="btn '+(p.hot?"btn-p":"btn-g")+' btn-block" data-plan="'+p.slug+'">'+p.cta+'</button>':'<button class="btn btn-g btn-block" disabled>Current Plan</button>')+'</div>').join("")+'</div>';
-  const hist=d.events.filter(e=>e.name==="plan_changed");
-  inner+='<h3 class="mt3 mb1">Billing history</h3>'+(hist.length?'<div class="card"><div class="kv">'+hist.slice().reverse().map(h=>'<div class="kvr"><span class="k">Plan changed to '+esc(h.meta.plan==="proplus"?"Pro+":h.meta.plan)+'</span><span class="v">'+fmtDate(h.ts)+'</span></div>').join("")+'</div></div>':'<div class="empty"><div class="eic">🧾</div><h3>No billing history yet.</h3><p>Plan changes will appear here.</p></div>');
+  const hist=d.events.filter(e=>e.name==="plan_changed"||e.name==="checkout_started");
+  inner+='<h3 class="mt3 mb1">Billing history</h3>'+(hist.length?'<div class="card"><div class="kv">'+hist.slice().reverse().map(h=>'<div class="kvr"><span class="k">'+esc(h.name==="checkout_started"?"Checkout started — "+(h.meta&&h.meta.plan==="proplus"?"Pro+":"Pro"):"Plan changed to "+(h.meta&&h.meta.plan==="proplus"?"Pro+":(h.meta&&h.meta.plan)||h.name))+'</span><span class="v">'+fmtDate(h.ts)+'</span></div>').join("")+'</div></div>':'<div class="empty"><div class="eic">🧾</div><h3>No billing history yet.</h3><p>Plan changes will appear here.</p></div>');
   shell(inner,"/app/billing");
   $$("[data-plan]").forEach(b=>b.onclick=()=>{
     const slug=b.dataset.plan;
     if(slug==="free"){confirmDlg("Downgrade to Free","You'll go back to 3 proposals per month. Pro features stay visible but locked.","Downgrade").then(ok=>{if(ok){d.plan="free";saveData(d);trackEvent("plan_changed",{plan:"free"});route();toast("Downgraded to Free.","ok");}});return;}
     checkoutModal(slug==="pro"?"Pro":"Pro+",slug==="pro"?"$9.99":"$19.99",slug);
   });
+}});
+
+/* ---------- CHECKOUT RESULT ---------- */
+S("/success",{title:"Payment successful",render(){
+  const d=getData(),slug=d.pendingPlan?d.pendingPlan.slug:null;
+  const name=slug==="proplus"?"Pro+":slug==="pro"?"Pro":null;
+  $("#app").innerHTML='<div class="auth-wrap"><div class="auth-card" style="text-align:center"><div style="font-size:44px">🎉</div><h2>Payment received!</h2>'+
+  '<p class="sub">'+(name?"Your <b>"+name+"</b> plan":"Your plan")+' activates within 24 hours — your receipt is on its way by email.</p>'+
+  '<a class="abtn btn btn-p btn-block" href="#/app">Go to my workspace</a><div class="auth-alt"><a href="#/contact">Questions? Contact us</a></div></div></div>';
+}});
+S("/cancel",{title:"Checkout cancelled",render(){
+  $("#app").innerHTML='<div class="auth-wrap"><div class="auth-card" style="text-align:center"><h2>No charge made</h2><p class="sub">You left checkout before paying — nothing was charged.</p><a class="abtn btn btn-p btn-block" href="#/app/billing">Back to Billing</a></div></div></div>';
 }});
 
 /* ---------- CONTACT ---------- */
@@ -1540,7 +1590,6 @@ S("/app/help",{auth:true,title:"Help",render(){
   inner+='<h3 class="mb1">Frequently asked questions</h3><div class="faq mb2">'+FAQS.map(f=>'<div class="fq"><div class="fq-q">'+f[0]+'<span>+</span></div><div class="fq-a">'+f[1]+'</div></div>').join("")+'</div>';
   inner+='<h3 class="mb1">Contact us</h3>'+contactCardHTML(Auth.user.name,Auth.user.email);
   shell(inner,"/app/help");
-  $$(".fq-q").forEach(q=>q.onclick=()=>q.parentElement.classList.toggle("open"));
   bindContactCard();
 }});
 
