@@ -595,7 +595,9 @@ function matchRoute(path){
 }
 function route(){
   closeModal();
-  const raw=((location.hash||"#/").slice(1).split("?")[0])||"/";
+  const h=location.hash||"#/";
+  if(h.charAt(1)!=="/")return; /* in-page anchor (#features, #pricing, #faq, #for-*) — leave it alone so the browser scrolls natively */
+  const raw=(h.slice(1).split("?")[0])||"/";
   const m=matchRoute(raw);
   if(!m){location.hash="#/";return;}
   if(m.def.auth&&!Auth.user){location.hash="#/signin";return;}
